@@ -7,24 +7,20 @@ import swaggerFile from './swagger-output.json' assert { type: 'json' };
 import logger from './utils/logger.js';
 import indexRouter from './routes/index.js';
 import timer from 'node:timers/promises';
+import config from './config/index.js';
 
 var app = express();
 
 app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
-app.use(
-  express.urlencoded({
-    limit: '10mb',
-    extended: false,
-  }),
-);
+app.use(express.urlencoded({ limit: '10mb', extended: false }));
 app.use(cookieParser());
 app.use(express.static('../public'));
 app.use('/apidocs', swaggerUi.serve, swaggerUi.setup(swaggerFile));
 
 app.use(
   cors({
-    origin: [/^https?:\/\/localhost/, /^https?:\/\/127.0.0.1/],
+    origin: config.cors.origin,
     credentials: true,
   }),
 );

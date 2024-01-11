@@ -1,12 +1,12 @@
-interface User {
-  email: string;
-  password: string;
-  name: string;
-  type: 'user' | 'seller';
-  phone?: string;
-  address?: string;
-  extra?: object;
-}
+// interface User {
+//   email: string;
+//   password: string;
+//   name: string;
+//   type: 'user' | 'seller';
+//   phone?: string;
+//   address?: string;
+//   extra?: object;
+// }
 
 const UserNew = function(){
   return (

@@ -2,9 +2,8 @@ import express from 'express';
 import _ from 'lodash';
 
 import logger from '#utils/logger.js';
-import model from '#models/code/code.model.js';
 import codeUtil from '#utils/codeUtil.js';
-import querystring from 'querystring';
+import model from '#models/code/code.model.js';
 
 const router = express.Router();
 
@@ -36,14 +35,10 @@ router.get('/', async function(req, res, next) {
   */
 
   try{
-    // let item = await model.find();
-    // logger.debug('code', item);
-    // if(item.length > 0){
-      const item = {
-        nested: codeUtil.getCodeObj(),
-        flatten: codeUtil.getCodeFlatten()
-      };
-    // }
+    const item = {
+      nested: codeUtil.getCodeObj(),
+      flatten: codeUtil.getCodeFlatten()
+    };
     res.json({ ok: 1, item });
   }catch(err){
     next(err);

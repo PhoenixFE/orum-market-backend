@@ -1,6 +1,6 @@
 import OrderEntry, { OrderItemType } from "../../components/order/OrderListTypeEntry";
 import { useEffect } from "react";
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import useCustomAxios from '../../hooks/useCustomAxios';
 
 interface OrderRes {
@@ -23,7 +23,7 @@ const OrderList = function(){
   const {isLoading, data, error} = useQuery({
     queryKey: ['orders'],
     queryFn: () => axios.get<OrderRes>(`/orders`),
-    select: data => data.data.item,
+    select: res => res.data.item,
     staleTime: 1000*2,
     refetchOnWindowFocus: false,
     retry: false

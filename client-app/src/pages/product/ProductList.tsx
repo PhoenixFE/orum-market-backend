@@ -8,6 +8,7 @@ import Category from "../../components/product/Category";
 import _ from 'lodash';
 import { CategoryCodeItemType, codeState } from "../../recoil/code/atoms";
 import { useRecoilValue } from "recoil";
+import Pagination from '../../components/common/Pagination';
 
 interface ProductResType {
   ok: 0 | 1;
@@ -17,15 +18,20 @@ interface ProductResType {
   message?: string;
 }
 
+interface FilterType {
+  [key: string]: string | boolean | number;
+}
+
 const ProductList = function(){
   console.log(useRecoilValue(codeState)!.nested);
   // const categoryList = useRecoilValue(codeState)!.nested.productCategory;
   const codeList = useRecoilValue(codeState)!.flatten;
   const location = useLocation();
-  const menu = queryString.parse(location.search).menu;
-  const category = queryString.parse(location.search).category;
+  const search = queryString.parse(location.search);
+  const menu = search.menu;
+  const category = search.category;
 
-  let filter = {};
+  let filter: FilterType = {};
   switch(menu){
     case 'new':
       filter = {"extra.isNew": true};
@@ -45,7 +51,13 @@ const ProductList = function(){
     }
   }
 
+  // filter.page = page || 1;
+
+  console.log(filter);
+
   const axios = useCustomAxios();
+
+  const totalPage = 3;
 
   useEffect(() => {
     console.log('ProductList 마운트');
@@ -54,7 +66,7 @@ const ProductList = function(){
 
   const {isLoading, data, error} = useQuery({
     queryKey: ['products', filter], // 쿼리키를 파라미터마다 지정(검색어, 페이지 등)
-    queryFn: () => axios.get<ProductResType>(`/products?delay=1000`, {params: {extra: JSON.stringify(filter)}}),
+    queryFn: () => axios.get<ProductResType>(`/products`, {params: {custom: JSON.stringify(filter)}}),
     select: data => data.data.item,
     staleTime: 1000*2,
     refetchOnWindowFocus: false,
@@ -78,7 +90,8 @@ const ProductList = function(){
         <ul>
           { itemList }
         </ul>
-      </div>   
+      </div>
+      <Pagination totalPage={ totalPage } />
     </div>
      
   );

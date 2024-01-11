@@ -10,6 +10,7 @@ if (process.env.NODE_ENV) {
 }
 
 export const db = {
+  protocol: process.env.DB_PROTOCOL,
   host: process.env.DB_HOST,
   port: process.env.DB_PORT,
   database: process.env.DB_DATABASE,
@@ -22,7 +23,7 @@ export const jwt = {
     secretKey: 'ShoppingAccessToken', // 암호키
     options: {
       algorithm: 'HS256', // 대칭키 방식
-      expiresIn: '2h', // 2시간
+      expiresIn: '2h',  // 2시간
       // expiresIn: '10m', // 10분
       // expiresIn: '10s',  // 10초
       issuer: 'FESP01', // 발행자
@@ -36,20 +37,18 @@ export const jwt = {
       // expiresIn: '30s',
       issuer: 'FESP01',
     },
-  },
+  }
 };
 
 export const cors = {
   origin: [
     /^https?:\/\/localhost/,
     /^https?:\/\/127.0.0.1/,
-    /^http:\/\/orum\.pro/,
     /netlify.app$/,
     /vercel.app$/,
-
-    new RegExp(process.env.APP_HOST),
-    /^https?:\/\/(www\.)?orum\.pro$/,
-  ],
+    /aws2.store$/,
+    new RegExp(process.env.APP_HOST)
+  ]
 };
 
-export default { db, jwt, cors };
+export default {db, jwt, cors};

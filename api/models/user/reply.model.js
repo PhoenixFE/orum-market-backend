@@ -1,7 +1,8 @@
 import _ from 'lodash';
 import moment from 'moment';
+
 import logger from '#utils/logger.js';
-import db, { nextSeq, getClient } from '#utils/dbUtil.js';
+import db, { nextSeq } from '#utils/dbUtil.js';
 import orderModel from '#models/user/order.model.js';
 
 const reply = {
@@ -12,17 +13,8 @@ const reply = {
     replyInfo.createdAt = moment().format('YYYY.MM.DD HH:mm:ss');
     
     if(!replyInfo.dryRun){
-
       await db.reply.insertOne(replyInfo);
       await orderModel.updateReplyId(replyInfo.order_id, replyInfo.product_id, replyInfo._id);
-
-      // TODO: 트랜젝션 처리
-      // getClient().withSession(async session => {
-      //   session.withTransaction(async session => {
-      //     await db.reply.insertOne(replyInfo, { session });
-      //     await orderModel.updateReplyId(replyInfo.order_id, replyInfo.product_id, replyInfo._id, session);
-      //   });
-      // }); 
     }    
     return replyInfo;
   },
@@ -154,7 +146,6 @@ const reply = {
         }
       }
     ]).sort({ _id: -1 }).toArray();
-
 
     logger.debug(list);
     return list;

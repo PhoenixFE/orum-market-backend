@@ -5,24 +5,27 @@
  */
 
 import http from 'node:http';
-
+import socketServer from './socketServer.js';
+import { Server }  from 'socket.io';
 import app from '../app.js';
 import logger from '../utils/logger.js';
 import config from '#config/index.js';
-import { Server }  from 'socket.io';
-import socketServer from './socketServer.js';
+
+
+// require('http').createServer(function(req, res){
+//   res.writeHead(301, {Location: 'https://localhost' + req.url}).end();
+// }).listen(80);
 
 /**
  * Get port from environment and store in Express.
  */
 
-var port = normalizePort(process.env.API_PORT || '80');
+var port = normalizePort(process.env.PORT || '3000');
 app.set('port', port);
 
 /**
  * Create HTTP server.
  */
-
 var server = http.createServer(app);
 
 /**
@@ -69,11 +72,11 @@ function onError(error) {
   // handle specific listen errors with friendly messages
   switch (error.code) {
     case 'EACCES':
-      logger.error(bind + ' requires elevated privileges');
+      console.error(bind + ' requires elevated privileges');
       process.exit(1);
       break;
     case 'EADDRINUSE':
-      conloggersole.error(bind + ' is already in use');
+      console.error(bind + ' is already in use');
       process.exit(1);
       break;
     default:
@@ -86,8 +89,9 @@ function onError(error) {
  */
 
 function onListening() {
-  logger.info(`API 서버 구동 완료. ${process.env.API_HOST}:${port}`);
+  logger.info(`API 서버 구동 완료. ${process.env.API_HOST}`);
 }
+
 
 // socket.io 서버 구동
 const io = new Server(server, { cors: { origin: config.cors.origin } } );

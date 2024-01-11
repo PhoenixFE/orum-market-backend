@@ -9,6 +9,9 @@ const { persistAtom } = recoilPersist({
 export interface UserType {
   _id: number;
   name: string;
+  phone: string;
+  email: string;
+  address: string;
   type: 'user' | 'seller' | 'admin';
   membershipClass: string;
 }

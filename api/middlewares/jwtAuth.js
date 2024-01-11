@@ -15,7 +15,8 @@ const jwtAuth = {
           if(payload.type === 'admin' || (payload.type === 'seller' && userType === 'user') || (payload.type === userType)){
             req.user = {
               _id: payload._id,
-              type: payload.type
+              type: payload.type,
+              name: payload.name
             };
             next();
           }else{
