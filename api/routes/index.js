@@ -9,5 +9,4 @@ router.use('/', adminRouter);
 router.use('/', userRouter);
 router.use('/', sellerRouter);
 
-
 export default router;

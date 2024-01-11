@@ -73,16 +73,10 @@ const codeUtil = {
       codeObj[code._id] = code;
       if(code.codes[0].depth){
         code.codes = this.createNestedStructure(code.codes);
-        
-      // }else{
-      //   // 정렬만
-      //   code.codes = _.sortBy(code.codes, 'sort');
       }
     });
     return codeObj;
   },
-
-
 };
 
 export default codeUtil;

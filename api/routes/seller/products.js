@@ -1,15 +1,18 @@
 import express from 'express';
 import { query, body } from 'express-validator';
+import _ from 'lodash';
 
 import logger from '#utils/logger.js';
 import validator from '#middlewares/validator.js';
 import model from '#models/user/product.model.js';
+import sellerModel from '#models/seller/product.model.js';
+import orderModel from '#models/seller/order.model.js';
 
 const router = express.Router();
 
 // 판매 상품 목록 조회
 router.get('/', [
-    query('extra').optional().isJSON().withMessage('extra 값은 JSON 형식의 문자열이어야 합니다.'),
+    query('custom').optional().isJSON().withMessage('custom 값은 JSON 형식의 문자열이어야 합니다.'),
     query('sort').optional().isJSON().withMessage('sort 값은 JSON 형식의 문자열이어야 합니다.')
   ], validator.checkResult, async function(req, res, next) {
 
@@ -30,26 +33,34 @@ router.get('/', [
     logger.trace(req.query);
 
     // 검색 옵션
-    let search = {
-      price: {},
-      shippingFees: {}
-    };
+    // 옵션이 있는 상품일 경우 메인 상품은 extra.depth:1, 옵션은 extra.depth: 2로 저장하므로 메인 상품 목록은 옵션을 제외하고 검색
+    let search = { 'extra.depth': { $ne: 2 } };
 
-    const minPrice = Number(req.query.minPrice) || 0;
-    const maxPrice = Number(req.query.maxPrice) || 99999999999;
-    const minShippingFees = Number(req.query.minShippingFees) || 0;    
-    const maxShippingFees = Number(req.query.maxShippingFees) || 99999999999;    
-    const seller = Number(req.query.seller_id);
+    const minPrice = Number(req.query.minPrice);
+    const maxPrice = Number(req.query.maxPrice);
+    const minShippingFees = Number(req.query.minShippingFees);    
+    const maxShippingFees = Number(req.query.maxShippingFees);
     const keyword = req.query.keyword;
-    const extra = req.query.extra;
+    const custom = req.query.custom;
 
-    search.price['$gte'] = minPrice;
-    search.price['$lte'] = maxPrice;
-    search.shippingFees['$gte'] = minShippingFees;
-    search.shippingFees['$lte'] = maxShippingFees;
+    if(minPrice >= 0){
+      search.price = search.price || {};
+      search.price['$gte'] = minPrice;
+    }
 
-    if(seller){
-      search['seller_id'] = seller;
+    if(maxPrice >=0){
+      search.price = search.price || {};
+      search.price['$lte'] = maxPrice;
+    }
+
+    if(minShippingFees >= 0){
+      search.shippingFees = search.shippingFees || {};
+      search.shippingFees['$gte'] = minShippingFees;
+    }
+
+    if(maxShippingFees >= 0){
+      search.shippingFees = search.shippingFees || {};
+      search.shippingFees['$lte'] = maxShippingFees;
     }
 
     if(keyword){
@@ -57,8 +68,8 @@ router.get('/', [
       search['name'] = { '$regex': regex };
     }
     
-    if(extra){
-      search = { ...search, ...JSON.parse(extra) };
+    if(custom){
+      search = { ...search, ...JSON.parse(custom) };
     }
 
     // 정렬 옵션
@@ -72,10 +83,21 @@ router.get('/', [
 
     // 기본 정렬 옵션은 등록일의 내림차순
     sortBy['createdAt'] = sortBy['createdAt'] || -1; // 내림차순
+
+    const page = Number(req.query.page || 1);
+    const limit = Number(req.query.limit || 0);
   
-    const item = await model.findBy({ sellerId: req.user._id, search, sortBy });
+    const result = await model.findBy({ sellerId: req.user._id, search, sortBy, page, limit });
     
-    res.json({ ok: 1, item });
+    for(const item of result.item){
+      const orders = await orderModel.findByProductId(item._id, req.user._id);
+      item.orders = orders.length;
+      item.ordersQuantity = _.sumBy(orders, order => {
+        return _.sumBy(order.products, 'quantity');
+      });
+    }
+
+    res.json({ ok: 1, ...result });
   }catch(err){
     next(err);
   }
@@ -119,9 +141,15 @@ router.get('/:_id', async function(req, res, next) {
 
   */
   try{
-    const result = await model.findById({ _id: Number(req.params._id), seller_id: req.user._id });
-    if(result && (result.seller_id == req.user._id || req.user.type === 'admin')){
-        res.json({ok: 1, item: result});
+    const _id = Number(req.params._id);
+    const seller_id = req.user._id;
+    const item = await model.findById({ _id, seller_id });
+    if(item){
+      item.orders = await orderModel.findByProductId(_id, seller_id);
+    }
+   
+    if(item && (item.seller_id == req.user._id || req.user.type === 'admin')){
+      res.json({ok: 1, item});
     }else{
       next();
     }
@@ -133,9 +161,9 @@ router.get('/:_id', async function(req, res, next) {
 // 상품 등록
 router.post('/', [
   body('price').isInt().withMessage('상품 가격은 정수만 입력 가능합니다.'),
-  body('shippingFees').isInt().withMessage('배송비는 정수만 입력 가능합니다.'),
+  body('shippingFees').optional().isInt().withMessage('배송비는 정수만 입력 가능합니다.'),
   body('name').trim().isLength({ min: 2 }).withMessage('상품명은 2글자 이상 입력해야 합니다.'),
-  body('mainImages').isArray().withMessage('메인 이미지는 배열로 전달해야 합니다.'),
+  body('mainImages').optional().isArray().withMessage('메인 이미지는 배열로 전달해야 합니다.'),
   body('content').trim().isLength({ min: 10 }).withMessage('상품 설명은 10글자 이상 입력해야 합니다.'),
 ], validator.checkResult, async function(req, res, next) {
 
@@ -196,7 +224,7 @@ router.post('/', [
   try{
     const newProduct = req.body;
     newProduct.seller_id = req.user._id;
-    const item = await model.create(newProduct);
+    const item = await sellerModel.create(newProduct);
     res.json({ok: 1, item});
   }catch(err){
     next(err);
@@ -283,9 +311,9 @@ router.patch('/:_id', [
 
   try{
     const _id = Number(req.params._id);
-    const product = await model.findAttrById({ _id, attr: 'seller_id', seller_id: req.user._id });
+    const product = await sellerModel.findAttrById({ _id, attr: 'seller_id', seller_id: req.user._id });
     if(req.user.type === 'admin' || product?.seller_id == req.user._id){
-      const result = await model.update(_id, req.body);
+      const result = await sellerModel.update(_id, req.body);
       res.json({ok: 1, updated: result});
     }else{
       next(); // 404
@@ -350,9 +378,9 @@ router.delete('/:_id', async function(req, res, next) {
 
   try{
     const _id = Number(req.params._id);
-    const product = await model.findAttrById({ _id, attr: 'seller_id', seller_id: req.user._id });
+    const product = await sellerModel.findAttrById({ _id, attr: 'seller_id', seller_id: req.user._id });
     if(req.user.type === 'admin' || product?.seller_id == req.user._id){
-      const result = await model.delete(_id);
+      const result = await sellerModel.delete(_id);
       res.json({ ok: 1 });
     }else{
       next(); // 404

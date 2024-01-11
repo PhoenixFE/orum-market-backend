@@ -32,6 +32,9 @@ export interface OrderItemType {
     trackingNumber: string;
     url: string;
   },
+  payment: {
+    receipt_url: string
+  };
   address: object;
   createdAt: string;
   updatedAt: string;
@@ -53,9 +56,13 @@ const OrderEntry = function({ order }: Props){
   return (
     <li>
       <p>구매 날짜: { order.createdAt }</p>
-      <p>주문 상태: { code?.flatten[order.state].value }</p>
+      <p>주문 상태: { code?.flatten[order.state]?.value }</p>
+
+      { order.payment &&
+        <Link to={order.payment.receipt_url} target="_blank">결제 내역 조회</Link>
+      }
       
-      { (order.state === 'OS035') && 
+      { order.delivery && 
         <ul>
           <li>택배사: {order.delivery.company}</li>
           <li>송장번호: {order.delivery.trackingNumber}</li>

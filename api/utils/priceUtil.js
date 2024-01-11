@@ -1,17 +1,12 @@
 import _ from 'lodash';
-import moment from 'moment';
-import createError from 'http-errors';
 
 import logger from '#utils/logger.js';
-import db, { nextSeq } from '#utils/dbUtil.js';
-import productModel from '#models/user/product.model.js';
-import replyModel from '#models/user/reply.model.js';
-import userModel from '#models/user/user.model.js';
-import cartModel from '#models/user/cart.model.js';
+import db from '#utils/dbUtil.js';
 import codeUtil from '#utils/codeUtil.js';
+import userModel from '#models/user/user.model.js';
 
 const priceUtil = {
-  async getCost(user_id, products, clientDiscount = { products: 0, shippingFees: 0 }){
+  async getCost( { user_id, products, clientDiscount = { products: 0, shippingFees: 0 } }){
 
     const sellerBaseShippingFees = {};
     const productArray = _.map(products, '_id');
@@ -33,17 +28,18 @@ const priceUtil = {
       shippingFees: _.sum(Object.values(sellerBaseShippingFees)),
     };
 
-    // 상품 할인 쿠폰, 배송비 쿠폰 처럼 주문 정보에 포함된 할인 금액
-
-
     // 회원 등급별 할인율
-    const membershipClass = await userModel.findAttrById(user_id, 'extra.membershipClass');
-    const discountRate = codeUtil.getCodeAttr(membershipClass?.extra.membershipClass, 'discountRate');
+    const totalDiscount = clientDiscount; // 상품 할인 쿠폰, 배송비 쿠폰 처럼 주문 정보에 포함된 할인 금액
+    if(user_id){
+      // 회원 등급
+      const membershipClass = await userModel.findAttrById(user_id, 'extra.membershipClass');
+      // 회원 등급별 할인율
+      const discountRate = codeUtil.getCodeAttr(membershipClass?.extra?.membershipClass, 'discountRate');
 
-    const totalDiscount = {
-      products: clientDiscount.products + Math.ceil((cost.products - clientDiscount.products) * (discountRate/100) /10) * 10,
-      shippingFees: clientDiscount.shippingFees
-    };
+      if(discountRate !== undefined){
+        totalDiscount.products = clientDiscount.products + Math.ceil((cost.products - clientDiscount.products) * (discountRate/100) /10) * 10;
+      }
+    }
 
     const result = {
       ...cost,

@@ -4,11 +4,8 @@ import createError from 'http-errors';
 
 import logger from '#utils/logger.js';
 import db, { nextSeq } from '#utils/dbUtil.js';
-import productModel from '#models/user/product.model.js';
-import replyModel from '#models/user/reply.model.js';
-import userModel from '#models/user/user.model.js';
-import codeUtil from '#utils/codeUtil.js';
 import priceUtil from '#utils/priceUtil.js';
+import productModel from '#models/user/product.model.js';
 
 const cart = {
   // 장바구니 등록
@@ -39,7 +36,38 @@ const cart = {
     return list;
   },
 
-  // 회원의 장바구니 목록 조회
+  // 장바구니 목록 조회(비로그인 상태))
+  async findLocalCart({ products, discount }){
+    logger.trace(arguments);
+    const carts = {
+      products: [],
+      cost: {}
+    };
+    for(let { _id, quantity } of products){
+      const product = await productModel.findById({ _id });
+      if(product){
+        carts.products.push({
+          _id,
+          quantity,
+          quantityInStock: product.quantity - product.buyQuantity,
+          seller_id: product.seller_id,
+          name: product.name,
+          image: product.mainImages[0],
+          price: product.price * quantity,
+          extra: product.extra
+        });
+      }else{
+        throw createError(422, `상품번호 ${_id}인 상품이 존재하지 않습니다.`);
+      }
+    }
+
+    carts.cost = await priceUtil.getCost({ products, clientDiscount: discount });
+
+    logger.debug(carts);
+    return carts;
+  },
+
+  // 장바구니 목록 조회(로그인 상태)
   async findByUser(user_id, discount){
     logger.trace(arguments);
     // const list = await db.cart.find({ user_id }).sort({ createdAt: -1 }).toArray();
@@ -72,13 +100,14 @@ const cart = {
           'product.seller_id': '$product.seller_id',
           'product.quantity': '$product.quantity',
           'product.buyQuantity': '$product.buyQuantity',
-          'product.image': { $arrayElemAt: ['$product.mainImages', 0] }
+          'product.image': { $arrayElemAt: ['$product.mainImages', 0] },
+          'product.extra': '$product.extra',
         }
       }
     ]).sort({ _id: -1 }).toArray();
 
 
-    list.cost = await priceUtil.getCost(user_id, _.map(list, cart => ({ _id: cart.product._id, quantity: cart.quantity })), discount);
+    list.cost = await priceUtil.getCost({ products: _.map(list, cart => ({ _id: cart.product._id, quantity: cart.quantity })), clientDiscount: discount, user_id });
 
     logger.debug(list);
     return list;

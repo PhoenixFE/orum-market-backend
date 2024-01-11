@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface QuantityProps {
   min?: number;
@@ -20,7 +20,11 @@ const QuantityInput = function({ min=1, max=100, setter }: QuantityProps) {
     }
   };
 
-  setter(quantity);
+  useEffect(() => {
+    setter(quantity);
+  }, [quantity]);
+
+  
   return (
     <>
       <label htmlFor="quantity">수량</label>

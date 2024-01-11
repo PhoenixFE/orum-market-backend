@@ -9,7 +9,7 @@ const router = express.Router();
 
 // 상품 목록 조회
 router.get('/', [
-    query('extra').optional().isJSON().withMessage('extra 값은 JSON 형식의 문자열이어야 합니다.'),
+    query('custom').optional().isJSON().withMessage('custom 값은 JSON 형식의 문자열이어야 합니다.'),
     query('sort').optional().isJSON().withMessage('sort 값은 JSON 형식의 문자열이어야 합니다.')
   ], validator.checkResult, async function(req, res, next) {
 
@@ -54,8 +54,8 @@ router.get('/', [
       in: 'query',
       type: 'number'
     }
-    #swagger.parameters['extra'] = {
-      description: "extra 데이터 예시: {\&quot;extra.isNew\&quot;: true}",
+    #swagger.parameters['custom'] = {
+      description: "custom 데이터 예시: {\&quot;extra.isNew\&quot;: true}",
       in: 'query',
       type: 'string'
     }
@@ -82,7 +82,7 @@ router.get('/', [
     logger.trace(req.query);
 
     // 검색
-    // 옵션이 있는 상품의 옵션은 extra.depth: 2로 저장하기로 해서 옵션은 제외하고 검색
+    // 옵션이 있는 상품일 경우 메인 상품은 extra.depth:1, 옵션은 extra.depth: 2로 저장하므로 메인 상품 목록은 옵션을 제외하고 검색
     let search = { 'extra.depth': { $ne: 2 } };
     // let search = {};
 
@@ -92,7 +92,7 @@ router.get('/', [
     const maxShippingFees = Number(req.query.maxShippingFees);    
     const seller = Number(req.query.seller_id);
     const keyword = req.query.keyword;
-    const extra = req.query.extra;
+    const custom = req.query.custom;
 
     if(minPrice >= 0){
       search.price = search.price || {};
@@ -123,25 +123,22 @@ router.get('/', [
       search['name'] = { '$regex': regex };
     }
     
-    if(extra){
-      search = { ...search, ...JSON.parse(extra) };
+    if(custom){
+      search = { ...search, ...JSON.parse(custom) };
     }
 
     // 정렬 옵션
-    let sortBy = {};
-    const sort = req.query.sort;
-
-    if(sort){
-      const parseOrder = JSON.parse(sort);
-      sortBy = parseOrder;
-    }
+    let sortBy = JSON.parse(req.query.sort || '{}');
 
     // 기본 정렬 옵션은 등록일의 내림차순
     sortBy['createdAt'] = sortBy['createdAt'] || -1; // 내림차순
+
+    const page = Number(req.query.page || 1);
+    const limit = Number(req.query.limit || 0);
   
-    const item = await model.findBy({ search, sortBy });
+    const result = await model.findBy({ search, sortBy, page, limit });
     
-    res.json({ ok: 1, item });
+    res.json({ ok: 1, ...result });
   }catch(err){
     next(err);
   }

@@ -3,7 +3,7 @@ import { useParams } from "react-router";
 import type { ProductItemType } from "../../components/product/ProductListTypeEntry";
 import { Link } from "react-router-dom";
 import useCustomAxios from '../../hooks/useCustomAxios';
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 
 export interface ProductResType {
   ok: 0 | 1,
@@ -23,7 +23,7 @@ const ProductNew = function(){
 
   const {isLoading, data, error} = useQuery({
     queryKey: ['products', _id], // 쿼리키를 파라미터마다 지정(검색어, 페이지 등)
-    queryFn: () => axios.get<ProductResType>(`/products/${_id}?delay=500&`),
+    queryFn: () => axios.get<ProductResType>(`/products/${_id}`),
     select: data => data.data.item,
     staleTime: 1000*2,
     refetchOnWindowFocus: false,
@@ -44,7 +44,8 @@ const ProductNew = function(){
             <span>매진</span>
           }
           <br /><br />
-          <img src={`${data.mainImages[0]}`} width="300px" />
+          <img src={`${import.meta.env.VITE_API_SERVER}${data.mainImages[0]?.url}`} width="300px" />
+          <Link to={`${import.meta.env.VITE_API_SERVER}/files/download/${data.mainImages[0]?.fileName}?name=${data.mainImages[0]?.orgName}`}>이미지 다운로드</Link>
           <p>가격: {data.price}</p>
           <p>배송비: {data.shippingFees}</p>
           <div dangerouslySetInnerHTML={{ __html: data.content }}/>
